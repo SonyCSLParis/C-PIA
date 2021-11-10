@@ -12,7 +12,7 @@ config = {
             "velocity_shift": True,
             "transposition": True,
         },
-        offset_beginning=(local_window_size - 1),
+        offset_beginning=-(local_window_size - 1),
         offset_end=-local_window_size,
     ),  # Can be different from the encoder's data loader
     # --- DataProcessor ---

@@ -1,9 +1,12 @@
-from CIA.dataset_managers.piano_midi_dataset import END_SYMBOL, PAD_SYMBOL, START_SYMBOL
-from .data_processor import DataProcessor
-import torch
 import random
-from torch import nn
+
+import torch
+from CIA.dataset_managers.piano_midi_dataset import (END_SYMBOL, PAD_SYMBOL,
+                                                     START_SYMBOL)
 from CIA.utils import cuda_variable
+from torch import nn
+
+from .data_processor import DataProcessor
 
 
 class PianoPrefixEndDataProcessor(DataProcessor):

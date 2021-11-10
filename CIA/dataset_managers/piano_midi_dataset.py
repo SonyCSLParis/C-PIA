@@ -10,16 +10,15 @@ import shutil
 import numpy as np
 import pretty_midi
 import torch
-from torch.utils import data
-from tqdm import tqdm
-
 from CIA.dataset_managers.piano_helper import (
+    MaestroIteratorGenerator,
     extract_cc,
     find_nearest_value,
-    MaestroIteratorGenerator,
-    get_time_table_ts,
     get_time_table_duration,
+    get_time_table_ts,
 )
+from torch.utils import data
+from tqdm import tqdm
 
 """
 Typical piano sequence:

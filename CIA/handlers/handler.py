@@ -1,10 +1,10 @@
-from CIA.dataloaders.dataloader import DataloaderGenerator
-from CIA.utils import display_monitored_quantities, is_main_process
-import torch
 import os
+
+import torch
+import torch.distributed as dist
+from CIA.utils import display_monitored_quantities, is_main_process
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
-import torch.distributed as dist
 
 
 class Handler:
@@ -12,7 +12,7 @@ class Handler:
         self,
         model: DistributedDataParallel,
         model_dir: str,
-        dataloader_generator: DataloaderGenerator,
+        dataloader_generator,
     ) -> None:
         self.model = model
         self.model_dir = model_dir

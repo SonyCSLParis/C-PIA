@@ -1,6 +1,6 @@
 import torch
-from DatasetManager.piano.piano_helper import PianoIteratorGenerator
-from DatasetManager.piano.piano_midi_dataset import PianoMidiDataset
+from CIA.dataset_managers.piano_helper import PianoIteratorGenerator
+from CIA.dataset_managers.piano_midi_dataset import PianoMidiDataset
 
 
 class PianoDataloaderGenerator:

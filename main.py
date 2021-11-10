@@ -106,7 +106,6 @@ def main(rank, train, load, overfitted, config, world_size, model_dir):
 
     # sos embedding
     sos_embedding = get_sos_embedding(
-        dataloader_generator=dataloader_generator,
         sos_embedding_dict=config["sos_embedding_dict"],
     )
 

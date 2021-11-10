@@ -17,7 +17,9 @@ config = {
     # --- DataProcessor ---
     "data_processor_type": "piano_prefixEnd",
     "data_processor_kwargs": dict(
-        embedding_size=64, num_events_local_window=local_window_size, num_events_end=256
+        embedding_size=64,
+        num_events_local_window=local_window_size,
+        num_events_context=256,
     ),  # Can be different from the encoder's data processor
     # --- Positional Embedding ---
     "positional_embedding_dict": dict(

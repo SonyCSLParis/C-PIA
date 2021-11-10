@@ -42,7 +42,7 @@ class SinusoidalRemainingTimeEmbedding(BasePositionalEmbedding):
             metadata_dict["placeholder_duration"].unsqueeze(1) - elapsed_time
         )
         # zero remaining_time in prefix
-        remaining_time[:, : self.data_processor.num_events_end] = 0
+        remaining_time[:, : self.data_processor.num_events_context] = 0
         assert torch.all(
             remaining_time >= -9e-3
         ), f"negative remaining_time values: {torch.min(remaining_time)}"
