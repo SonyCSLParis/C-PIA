@@ -94,7 +94,7 @@ def categorical_crossentropy(value, target, mask=None, label_smoothing=False):
     :param mask: (batch_size, num_events, num_channels)
     :return:
     """
-    cross_entropy = nn.CrossEntropyLoss(reduction=None)
+    cross_entropy = nn.CrossEntropyLoss(reduction='none')
     sum = 0
 
     for channel_probs, target_channel, mask_channel in zip(
