@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 
 # TODO duplicated code with decoder_prefix_handler.py
-class DecoderEventsHandler(Handler):
+class EventsHandler(Handler):
     def __init__(
         self,
         model: DistributedDataParallel,
@@ -194,7 +194,7 @@ class DecoderEventsHandler(Handler):
         # TODO add arguments to preprocess
         print(f'Placeholder duration: {metadata_dict["placeholder_duration"]}')
         self.eval()
-        batch_size, num_events, _ = x.size()
+        batch_size, num_events, _ = x.size()    
 
         # TODO only works with batch_size=1 at present
         assert x.size(0) == 1

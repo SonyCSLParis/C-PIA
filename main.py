@@ -98,9 +98,11 @@ def main(rank, train, load, overfitted, config, world_size, model_dir):
     )
 
     # positional embedding
+    expand_channels = True if (config["handler_type"] == "channel") else False
     positional_embedding: PositionalEmbedding = get_positional_embedding(
         dataloader_generator=dataloader_generator,
         data_processor=data_processor,
+        expand_channels=expand_channels,
         positional_embedding_dict=config["positional_embedding_dict"],
     )
 

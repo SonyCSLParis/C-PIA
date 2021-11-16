@@ -14,7 +14,7 @@ from torch.nn.parallel import DistributedDataParallel
 from tqdm import tqdm
 
 
-class DecoderPrefixHandler(Handler):
+class ChannelHandler(Handler):
     def __init__(
         self, model: DistributedDataParallel, model_dir: str, dataloader_generator
     ) -> None:

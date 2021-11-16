@@ -26,73 +26,50 @@ class SinusoidalRemainingTimeEmbedding(BasePositionalEmbedding):
 
         self.dropout = torch.nn.Dropout(p=dropout)
         self.num_channels = num_channels
-        self.mask_positions = kwargs["mask_positions"]
-        if self.mask_positions:
-            self.mask_vector = nn.Parameter(
-                torch.randn((self.positional_embedding_size,))
-            )
 
-    def forward(self, x_embed, i, h, metadata_dict):
+    def forward(self, x_embed, i, metadata_dict):
         assert i == 0
         batch_size, num_events, num_channels = x_embed.size()
 
         # add embedding_dim to elapsed time
         elapsed_time = self.data_processor.compute_elapsed_time(metadata_dict)
-        remaining_time = (
-            metadata_dict["placeholder_duration"].unsqueeze(1) - elapsed_time
-        )
+        remaining_time = metadata_dict["remaining_time"].unsqueeze(1) - elapsed_time
         # zero remaining_time in prefix
-        remaining_time[:, : self.data_processor.num_events_context] = 0
+        decoding_start = metadata_dict["decoding_start"]
+        remaining_time[:, :decoding_start] = 0
+        # make sure negative values are very small and only due to rounding/quantization errors
         assert torch.all(
             remaining_time >= -9e-3
         ), f"negative remaining_time values: {torch.min(remaining_time)}"
+        # zero negative values
+        remaining_time = torch.where(
+            remaining_time < 0.0, torch.zeros_like(remaining_time), remaining_time
+        )
         remaining_time = remaining_time.unsqueeze(2)
         # scaling
         remaining_time = remaining_time * 100
+        if self.expand_channels:
+            remaining_time = remaining_time.repeat_interleave(self.num_channels, dim=1)
+        else:
+            remaining_time = remaining_time
 
         # sinusoid
         pe = torch.zeros(batch_size, num_events, self.positional_embedding_size)
-        pe = pe.to(device=x_embed.device)
+        pos_embedding = pe.to(device=x_embed.device)
         div_term = torch.exp(
             torch.arange(0, self.positional_embedding_size, 2).float()
             * (-math.log(10000.0) / self.positional_embedding_size)
         )
         div_term = div_term.to(device=x_embed.device)
         div_term = div_term.unsqueeze(0).unsqueeze(0)
-        pe[:, :, 0::2] = torch.sin(remaining_time * div_term)
-        pe[:, :, 1::2] = torch.cos(remaining_time * div_term)
-
-        if self.expand_channels:
-            pos_embedding = pe.repeat_interleave(self.num_channels, dim=1)
-        else:
-            pos_embedding = pe
-
-        if self.mask_positions:
-            if not self.expand_channels:
-                raise NotImplementedError
-            masked_positions = metadata_dict["masked_positions"]
-            flattened_masked_positions = flatten(masked_positions)
-            flattened_masked_positions = flattened_masked_positions.view(
-                batch_size * num_events * num_channels
-            )
-            pos_embedding = pos_embedding.view(
-                batch_size * num_events * num_channels, self.positional_embedding_size
-            )
-            pos_embedding[
-                flattened_masked_positions.bool()
-            ] = self.mask_vector.unsqueeze(0)
-            pos_embedding = pos_embedding.view(
-                batch_size, num_events * num_channels, self.positional_embedding_size
-            )
+        pos_embedding[:, :, 0::2] = torch.sin(remaining_time * div_term)
+        pos_embedding[:, :, 1::2] = torch.cos(remaining_time * div_term)
 
         pos_embedding = self.dropout(pos_embedding)
         x_embed = torch.cat([x_embed, pos_embedding], dim=2)
-        return x_embed, None
+        return x_embed
 
     def forward_step(self, x, i=0, metadata_dict={}):
-        if not self.expand_channels:
-            raise NotImplementedError
-
         # time_shift must be the last feature
         assert (
             self.dataloader_generator.features.index("time_shift")
@@ -104,11 +81,8 @@ class SinusoidalRemainingTimeEmbedding(BasePositionalEmbedding):
         ), 'Dictionnary metadata_dict must contain entry "original_token" in order to compute the elapsed time'
 
         batch_size = x.size(0)
-        # h represents the elapsed time
-        if h is None:
-            h = torch.zeros((batch_size,)).to(x.device)
-
-        elapsed_time = h.unsqueeze(1)
+        raise NotImplementedError("quelle valeur pour elapsed_time ici")
+        elapsed_time = self.data_processor.compute_elapsed_time(metadata_dict)
 
         pe = torch.zeros(batch_size, self.positional_embedding_size)
         pe = pe.to(device=x.device)

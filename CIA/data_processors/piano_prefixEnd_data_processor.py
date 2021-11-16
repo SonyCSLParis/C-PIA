@@ -1,8 +1,7 @@
 import random
 
 import torch
-from CIA.dataset_managers.piano_midi_dataset import (END_SYMBOL, PAD_SYMBOL,
-                                                     START_SYMBOL)
+from CIA.dataset_managers.piano_midi_dataset import END_SYMBOL, PAD_SYMBOL, START_SYMBOL
 from CIA.utils import cuda_variable
 from torch import nn
 
@@ -159,7 +158,10 @@ class PianoPrefixEndDataProcessor(DataProcessor):
 
         before = x[:, :num_events_suffix]
         after = x[:, num_events_suffix : num_events_suffix + self.num_events_context]
-        placeholder_duration = self.dataloader_generator.get_elapsed_time(before)[:, -1]
+        remaining_time = self.dataloader_generator.get_elapsed_time(before)[:, -1]
+        placeholder_duration = self.dataloader_generator.get_elapsed_time(
+            before[self.num_events_local_window :]
+        )[:, -1]
 
         prefix_list, suffix_list = [], []
         # TODO batch this?!
@@ -327,8 +329,9 @@ class PianoPrefixEndDataProcessor(DataProcessor):
         # of the SOD symbol (only the placeholder is added)
         metadata_dict = {
             "placeholder_duration": placeholder_duration,
+            "remaingin_time": remaining_time,
             "decoding_start": decoding_start,
-            "decoding_end": None,
+            # "decoding_end": None,
             "original_sequence": y,
             "loss_mask": final_mask,
         }

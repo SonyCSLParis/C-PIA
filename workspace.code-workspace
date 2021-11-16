@@ -1,0 +1,47 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"python.pythonPath": "venv/bin/python"
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "train",
+				"type": "python",
+				"request": "launch",
+				"program": "main.py",
+				"console": "integratedTerminal",
+				"justMyCode": true,
+				"args": [
+					"--config=CIA/configs/piano_performer.py",
+					"-t",
+				],
+				"env": {
+					"CUDA_VISIBLE_DEVICES": "0",
+				}
+			},
+			{
+				"name": "generate",
+				"type": "python",
+				"request": "launch",
+				"program": "main.py",
+				"console": "integratedTerminal",
+				"justMyCode": true,
+				"args": [
+					"--config=models/piano_event_endFirstReversed_performer_2021-10-14_10:40:21/config.py",
+					"-o",
+					"-l",
+					"--num_workers=0"
+				],
+				"env": {
+					"CUDA_VISIBLE_DEVICES": "0",
+				}
+			}
+		]
+	}
+}

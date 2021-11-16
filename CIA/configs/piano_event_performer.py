@@ -30,7 +30,6 @@ config = {
             positional_embedding_size=128,
             num_channels=4,
             dropout=0.0,
-            mask_positions=False,
             expand_channels=False,
         ),
         sinusoidal_progress_bar_embedding=dict(

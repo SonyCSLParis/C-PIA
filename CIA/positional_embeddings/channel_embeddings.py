@@ -4,18 +4,16 @@ import torch
 
 
 class ChannelEmbeddings(BasePositionalEmbedding):
-
-    def __init__(self,
-                 positional_embedding_size,
-                 num_channels,
-                 ):
-        super(ChannelEmbeddings, self).__init__()
+    def __init__(
+        self,
+        positional_embedding_size,
+        num_channels,
+    ):
+        super(ChannelEmbeddings, self).__init__(expand_channels=None)
         self.num_channels = num_channels
         self.positional_embedding_size = positional_embedding_size
         self.pe_0 = nn.Parameter(
-            torch.randn(
-                1, num_channels, positional_embedding_size
-            )
+            torch.randn(1, num_channels, positional_embedding_size)
         )
 
     def forward(self, x, i=0, h=None, metadata_dict={}):
@@ -37,13 +35,11 @@ class ChannelEmbeddings(BasePositionalEmbedding):
         offset = i % self.num_channels
 
         # slice so that we have the correct offset
-        positional_embeddings = positional_embeddings[:, offset: offset + num_tokens]
+        positional_embeddings = positional_embeddings[:, offset : offset + num_tokens]
 
-        x = torch.cat([
-            x, positional_embeddings
-        ], dim=2)
+        x = torch.cat([x, positional_embeddings], dim=2)
 
-        return x, h
+        return x
 
     def forward_step(self, x, i=0, h=None, metadata_dict={}):
         """
@@ -58,13 +54,8 @@ class ChannelEmbeddings(BasePositionalEmbedding):
         batch_size, _ = x.size()
 
         offset = i % self.num_channels
-        positional_embeddings = self.pe_0.repeat(batch_size, 1, 1)[:,offset]
+        positional_embeddings = self.pe_0.repeat(batch_size, 1, 1)[:, offset]
 
+        x = torch.cat([x, positional_embeddings], dim=1)
 
-        x = torch.cat([
-            x, positional_embeddings
-        ], dim=1)
-
-        return x, h
-
-
+        return x

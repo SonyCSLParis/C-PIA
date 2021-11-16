@@ -14,6 +14,8 @@ from performer_pytorch.performer_pytorch import (
     cast_tuple,
 )
 
+from CIA.model.execute_type.sequential import SequentialSequence_
+
 
 class Performer_(nn.Module):
     def __init__(
@@ -235,6 +237,8 @@ class _Performer_(nn.Module):
             execute_type = ReversibleSequence_
         elif execute_type == "gated":
             execute_type = GatedSequence_
+        elif execute_type == "sequential":
+            execute_type = SequentialSequence_
         else:
             raise NotImplementedError
 

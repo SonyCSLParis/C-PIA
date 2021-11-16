@@ -93,10 +93,10 @@ class CausalEventsModelFullCat(nn.Module):
     def __repr__(self) -> str:
         return "CausalEventsDecoderFullCat"
 
-    def prepare_sequence(self, target_seq, metadata_dict, h_pe_init):
+    def prepare_sequence(self, target_seq, metadata_dict):
         # add input positional embeddings
-        target_seq, h_pe = self.positional_embedding(
-            target_seq, i=0, h=h_pe_init, metadata_dict=metadata_dict
+        target_seq = self.positional_embedding(
+            target_seq, i=0, metadata_dict=metadata_dict
         )
         target_seq = self.linear_target(target_seq)
 
@@ -105,7 +105,6 @@ class CausalEventsModelFullCat(nn.Module):
             layer_pos_emb_input = get_pe_input(
                 data_processor=self.data_processor,
                 x_embed=target_seq,
-                h=h_pe_init,
                 metadata_dict=metadata_dict,
                 pe_input_type=self.pe_input_type,
                 event_representation=True,
@@ -125,20 +124,15 @@ class CausalEventsModelFullCat(nn.Module):
             layer_pos_emb_input = layer_pos_emb_input[:, :-1]
         else:
             layer_pos_emb_input = None
-        return target_seq, layer_pos_emb_input, h_pe
+        return target_seq, layer_pos_emb_input
 
-    def compute_event_state(self, target, metadata_dict, h_pe_init):
-        batch_size, _, _ = target.size()
+    def compute_event_state(self, target, metadata_dict):
+        # (batch_size, num_events, num_channels, dim)
         target_embedded = self.data_processor.embed(target)
-        # target_embedded is (batch_size, num_events, num_channels, dim)
-
-        # WE do NOT flatten
-        # target_seq = flatten(target_embedded)
-        # target_seq is (batch_size, num_vents, dim * num_channels)
+        # WE do NOT flatten here
         target_seq = torch.cat(target_embedded.split(1, dim=2), dim=3).squeeze(2)
-
-        target_seq, layer_pos_emb_input, h_pe = self.prepare_sequence(
-            target_seq, metadata_dict, h_pe_init
+        target_seq, layer_pos_emb_input = self.prepare_sequence(
+            target_seq, metadata_dict
         )
 
         # forward pass
@@ -152,18 +146,16 @@ class CausalEventsModelFullCat(nn.Module):
         )
         output = out["x"]
 
-        return output, target_embedded, h_pe
+        return output, target_embedded
 
-    def forward(self, target, metadata_dict, h_pe_init=None):
+    def forward(self, target, metadata_dict):
         """
         :param target: sequence of tokens (batch_size, num_events, num_channels)
         :return:
         """
         # compute event_state
         # embed + add positional embedding + offset + transformer pass
-        output, target_embedded, h_pe = self.compute_event_state(
-            target, metadata_dict, h_pe_init
-        )
+        output, target_embedded = self.compute_event_state(target, metadata_dict)
 
         # auto regressive predictions from output
         weights_per_category = self.event_state_to_weights(
@@ -214,7 +206,6 @@ class CausalEventsModelFullCat(nn.Module):
 
             return {
                 "loss": loss,
-                "h_pe": h_pe,
                 "weights_per_category": weights_per_category,
                 "monitored_quantities": {
                     "loss": loss.item(),
@@ -233,7 +224,6 @@ class CausalEventsModelFullCat(nn.Module):
 
             return {
                 "loss": loss,
-                "h_pe": h_pe,
                 "weights_per_category": weights_per_category,
                 "monitored_quantities": {"loss": loss.item()},
             }
@@ -271,8 +261,7 @@ class CausalEventsModelFullCat(nn.Module):
         """
         if i == 0, target is not used: SOS instead
         :param target: sequence of tokens (batch_size,)
-        :param i:
-        :param h_pe:
+        :param i:f
         :return:
         """
         raise NotImplementedError
@@ -280,9 +269,7 @@ class CausalEventsModelFullCat(nn.Module):
     def infer_hidden_states(self, priming_seq, metadata_dict, decoding_start_index):
         target_embedded = self.data_processor.embed(priming_seq)
         target_seq = flatten(target_embedded)
-        target_seq, layer_pos_emb, h_pe = self.prepare_sequence(
-            target_seq, metadata_dict, h_pe_init=None
-        )
+        target_seq, layer_pos_emb = self.prepare_sequence(target_seq, metadata_dict)
         out = self.transformer(
             target_seq[:, : decoding_start_index + 1],
             pos_emb_input=layer_pos_emb[:, : decoding_start_index + 1],
@@ -310,9 +297,7 @@ class CausalEventsModelFullCat(nn.Module):
 
         target_embedded = self.data_processor.embed(target)
         target_seq = flatten(target_embedded)
-        target_seq, layer_pos_emb, h_pe = self.prepare_sequence(
-            target_seq, metadata_dict, h_pe_init=None
-        )
+        target_seq, layer_pos_emb = self.prepare_sequence(target_seq, metadata_dict)
         # bbb = time.time()
         out = self.transformer(
             target_seq[:, decoding_index : decoding_index + 1],

@@ -5,17 +5,25 @@ from CIA.data_processors.piano_prefixEnd_data_processor import (
     PianoPrefixEndDataProcessor,
 )
 from CIA.dataloaders.piano_dataloader import PianoDataloaderGenerator
+from CIA.handlers.channel_handler import ChannelHandler
+from CIA.handlers.events_handler import EventsHandler
 from CIA.model.causal_events_model import CausalEventsModel
 from CIA.model.causal_events_model_full_cat import CausalEventsModelFullCat
 from CIA.model.causal_model import CausalModel
 from CIA.model.transformer.catformer import Catformer
 from CIA.model.transformer.performer import Performer_
-from CIA.positional_embeddings import (
+from CIA.positional_embeddings.channel_embeddings import ChannelEmbeddings
+from CIA.positional_embeddings.positional_embedding import (
     BasePositionalEmbedding,
-    ChannelEmbeddings,
     PositionalEmbedding,
+)
+from CIA.positional_embeddings.sinusoidal_elapsed_time_embedding import (
     SinusoidalElapsedTimeEmbedding,
+)
+from CIA.positional_embeddings.sinusoidal_positional_embedding import (
     SinusoidalPositionalEmbedding,
+)
+from CIA.positional_embeddings.sinusoidal_progress_bar_embedding import (
     SinusoidalProgressBarEmbedding,
 )
 from CIA.positional_embeddings.sinusoidal_remaining_time_embedding import (
@@ -26,8 +34,6 @@ from CIA.start_of_sequence_embeddings import (
     LearntSOSEmbedding,
     SOSEmbedding,
 )
-
-from .handlers import DecoderEventsHandler, DecoderPrefixHandler
 
 
 def get_dataloader_generator(dataset, dataloader_generator_kwargs):
@@ -76,7 +82,7 @@ def get_data_processor(
 
 
 def get_positional_embedding(
-    dataloader_generator, data_processor, positional_embedding_dict
+    dataloader_generator, data_processor, positional_embedding_dict, expand_channels
 ) -> PositionalEmbedding:
     base_positional_embedding_list = []
     for pe_name, pe_kwargs in positional_embedding_dict.items():
@@ -89,7 +95,7 @@ def get_positional_embedding(
                 num_tokens_max=num_tokens_max,
                 num_channels=pe_kwargs["num_channels"],
                 dropout=pe_kwargs["dropout"],
-                expand_channels=pe_kwargs["expand_channels"],
+                expand_channels=expand_channels,
             )
         elif pe_name == "channel_embedding":
             base_pe = ChannelEmbeddings(**pe_kwargs)
@@ -97,18 +103,21 @@ def get_positional_embedding(
             base_pe: BasePositionalEmbedding = SinusoidalElapsedTimeEmbedding(
                 dataloader_generator=dataloader_generator,
                 data_processor=data_processor,
+                expand_channels=expand_channels,
                 **pe_kwargs
             )
         elif pe_name == "sinusoidal_progress_bar_embedding":
             base_pe: BasePositionalEmbedding = SinusoidalProgressBarEmbedding(
                 dataloader_generator=dataloader_generator,
                 data_processor=data_processor,
+                expand_channels=expand_channels,
                 **pe_kwargs
             )
         elif pe_name == "sinusoidal_remaining_time_embedding":
             base_pe: BasePositionalEmbedding = SinusoidalRemainingTimeEmbedding(
                 dataloader_generator=dataloader_generator,
                 data_processor=data_processor,
+                expand_channels=expand_channels,
                 **pe_kwargs
             )
         else:
@@ -269,13 +278,13 @@ def get_sos_embedding(sos_embedding_dict) -> SOSEmbedding:
 
 def get_handler(handler_type, decoder, model_dir, dataloader_generator):
     if handler_type == "event":
-        return DecoderEventsHandler(
+        return EventsHandler(
             model=decoder,
             model_dir=model_dir,
             dataloader_generator=dataloader_generator,
         )
     elif handler_type == "channel":
-        return DecoderPrefixHandler(
+        return ChannelHandler(
             model=decoder,
             model_dir=model_dir,
             dataloader_generator=dataloader_generator,

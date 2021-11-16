@@ -65,10 +65,10 @@ class CausalModel(nn.Module):
     def __repr__(self) -> str:
         return "CausalPrefixDecoder"
 
-    def prepare_sequence(self, target_seq, metadata_dict, h_pe_init):
+    def prepare_sequence(self, target_seq, metadata_dict):
         # add input positional embeddings
-        target_seq, h_pe = self.positional_embedding(
-            target_seq, i=0, h=h_pe_init, metadata_dict=metadata_dict
+        target_seq = self.positional_embedding(
+            target_seq, i=0, metadata_dict=metadata_dict
         )
         target_seq = self.linear_target(target_seq)
 
@@ -77,7 +77,6 @@ class CausalModel(nn.Module):
             layer_pos_emb_input = get_pe_input(
                 dataloader_generator=self.dataloader_generator,
                 x_embed=target_seq,
-                h=h_pe_init,
                 metadata_dict=metadata_dict,
                 pe_input_type=self.pe_input_type,
                 event_representation=False,
@@ -97,9 +96,9 @@ class CausalModel(nn.Module):
             layer_pos_emb_input = layer_pos_emb_input[:, :-1]
         else:
             layer_pos_emb_input = None
-        return target_seq, layer_pos_emb_input, h_pe
+        return target_seq, layer_pos_emb_input
 
-    def forward(self, target, metadata_dict, h_pe_init=None):
+    def forward(self, target, metadata_dict):
         """
         :param target: sequence of tokens (batch_size, num_events, num_channels)
         :return:
@@ -107,8 +106,8 @@ class CausalModel(nn.Module):
         batch_size, _, _ = target.size()
         target_embedded = self.data_processor.embed(target)
         target_seq = flatten(target_embedded)
-        target_seq, layer_pos_emb_input, h_pe = self.prepare_sequence(
-            target_seq, metadata_dict, h_pe_init
+        target_seq, layer_pos_emb_input = self.prepare_sequence(
+            target_seq, metadata_dict
         )
 
         # forward pass
@@ -169,7 +168,6 @@ class CausalModel(nn.Module):
 
             return {
                 "loss": loss,
-                "h_pe": h_pe,
                 "weights_per_category": weights_per_category,
                 "monitored_quantities": {
                     "loss": loss.item(),
@@ -188,7 +186,6 @@ class CausalModel(nn.Module):
 
             return {
                 "loss": loss,
-                "h_pe": h_pe,
                 "weights_per_category": weights_per_category,
                 "monitored_quantities": {"loss": loss.item()},
             }

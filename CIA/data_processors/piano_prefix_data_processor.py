@@ -27,6 +27,8 @@ class PianoPrefixDataProcessor(DataProcessor):
         self.dataloader_generator = dataloader_generator
         self.num_events_before = num_events_context
         self.num_events_after = num_events_context
+        self.start_end = num_events_context + 1  # + 1 for placeholder
+        self.end_end = num_events_context + 1  # + 1 for placeholder
 
         self.placeholder_symbols = nn.Parameter(
             torch.LongTensor(num_tokens_per_channel), requires_grad=False
@@ -149,31 +151,21 @@ class PianoPrefixDataProcessor(DataProcessor):
         ]
 
         placeholder_duration = self.dataloader_generator.get_elapsed_time(middle)[:, -1]
+        before_duration = self.dataloader_generator.get_elapsed_time(before)[:, -1]
+        remaining_time = placeholder_duration + before_duration
 
         # === Compute Placeholder
-        placeholder, placeholder_duration_token = self.compute_placeholder(
+        placeholder, _ = self.compute_placeholder(
             placeholder_duration=placeholder_duration, batch_size=batch_size
         )
 
         new_before_list, new_middle_list, new_after_list = [], [], []
 
         # TODO batch this?!
-        for (
-            b,
-            m,
-            a,
-            p_duration,
-            p_duration_token,
-            c_start_token,
-            c_end_token,
-            start_token_l,
-            end_token_l,
-        ) in zip(
+        for (b, m, a, c_start_token, c_end_token, start_token_l, end_token_l,) in zip(
             before,
             middle,
             after,
-            placeholder_duration,
-            placeholder_duration_token,
             contains_start_token,
             contains_end_token,
             start_token_location,
@@ -345,11 +337,11 @@ class PianoPrefixDataProcessor(DataProcessor):
         # add placeholder: it is added at num_events_before position
         final_mask[:, self.num_events_before, :] = True
 
-        # decoding_start = self.num_events_before + self.num_events_after + 2
-        # # compute decoding_end
-        # is_end_token_new_middle = (
-        #     new_middle[:, :, 0] == self.end_tokens[0].unsqueeze(0).unsqueeze(0).repeat(
-        #         batch_size, new_middle.size(1)))
+        decoding_start = self.num_events_before + self.num_events_after + 2
+        # compute decoding_end
+        # is_end_token_new_middle = new_middle[:, :, 0] == self.end_tokens[0].unsqueeze(
+        #     0
+        # ).unsqueeze(0).repeat(batch_size, new_middle.size(1))
         # # only valid when containes_end_token!!
         # end_token_location_new_middle = torch.argmax(
         #     is_end_token_new_middle.long(), dim=1)
@@ -360,7 +352,8 @@ class PianoPrefixDataProcessor(DataProcessor):
         # of the SOD symbol (only the placeholder is added)
         metadata_dict = {
             "placeholder_duration": placeholder_duration,
-            # 'decoding_start': decoding_start,
+            "remaining_time": remaining_time,
+            "decoding_start": decoding_start,
             # 'decoding_end': decoding_end,
             "original_sequence": y,
             "loss_mask": final_mask,
@@ -392,14 +385,10 @@ class PianoPrefixDataProcessor(DataProcessor):
         return placeholder, placeholder_duration_token
 
     def compute_elapsed_time(self, metadata_dict):
-        # if h is None:
-        #     h = torch.zeros((x_embed.size(0),)).to(x_embed.device)
         # Original sequence is in prefix order!
         x = metadata_dict["original_sequence"]
         _, _, num_channels = x.size()
         elapsed_time = self.dataloader_generator.get_elapsed_time(x)
-        # h = elapsed_time[:, -1]
-        # h = h - elapsed_time[:, metadata_dict['decoding_start'] - 1]
         # add zeros
         elapsed_time = torch.cat(
             [torch.zeros_like(elapsed_time)[:, :1], elapsed_time[:, :-1]], dim=1
@@ -411,9 +400,6 @@ class PianoPrefixDataProcessor(DataProcessor):
                 - elapsed_time[:, metadata_dict["decoding_start"]].unsqueeze(1)
                 + elapsed_time[:, 255].unsqueeze(1)
             )
-        # TODO scale?! only 10?!
-        # elapsed_time = elapsed_time * 100
-        # h = h * 100
         if torch.any(elapsed_time < 0):
             print("stop")
         return elapsed_time
